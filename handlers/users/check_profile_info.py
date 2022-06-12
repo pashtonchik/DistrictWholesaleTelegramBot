@@ -3,10 +3,11 @@ from aiogram.dispatcher import FSMContext
 from aiogram.types import WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
 
 from bd_custumers import take_customer, edit_customer, input_all
+import data
 from keyboards.inline.yesno import yesorno
 from keyboards.inline.edit_profile import edit
 from keyboards.inline.yesno import yesorno
-
+import json
 from loader import dp, bot
 from states.state import setting
 
@@ -81,9 +82,16 @@ async def check_fio(message: types.Message):
     await message.answer(text=msg, reply_markup=edit)
     await setting.check_profile.set()
 
-@dp.message_handler(content_types="web_app_data") #получаем отправленные данные
+@dp.message_handler(content_types="web_app_data")
 async def answer(webAppMes: types.WebAppData):
-   print(webAppMes) #вся информация о сообщении
-   print(webAppMes.web_app_data.data) #конкретно то что мы передали в бота
-   await bot.send_message(webAppMes.chat.id, f"получили инофрмацию из веб-приложения: {webAppMes.web_app_data.data}")
-   #отправляем сообщение в ответ на отправку данных из веб-приложения
+#    print(webAppMes)
+    data_json = json.loads(webAppMes.web_app_data.data)
+    print(data_json)
+    message = str()
+    total = 0
+    for i in data_json:
+        total += int(i['price'])
+        message += f"👟{i['title']} x{i['quantity']} — ₽{i['price']}\n"
+    message += f"Итоговая сумма: ₽{total}\n Ссылка на оплату: https://google.com"
+    await bot.send_message(webAppMes.chat.id, f"Ваш заказ:\n {message}")
+    
