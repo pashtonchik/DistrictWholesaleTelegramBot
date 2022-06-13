@@ -11,6 +11,15 @@ import json
 from loader import dp, bot
 from states.state import setting
 
+from freekassa import FreeKassaApi
+import requests
+
+client = FreeKassaApi(
+    first_secret='z$LLtY$7C<oiOpF',
+    second_secret='!UZi(zYI3E63/&[',
+    merchant_id='13d0bfab8dd487182cf417977fe8470c',
+    wallet_id='18316')
+
 
 @dp.message_handler(text='Меню')
 async def check_fio(message: types.Message, state=FSMContext):
@@ -82,16 +91,25 @@ async def check_fio(message: types.Message):
     await message.answer(text=msg, reply_markup=edit)
     await setting.check_profile.set()
 
+
 @dp.message_handler(content_types="web_app_data")
 async def answer(webAppMes: types.WebAppData):
-#    print(webAppMes)
     data_json = json.loads(webAppMes.web_app_data.data)
+    balance = client.get_balance()
+    print(balance.text)
     print(data_json)
     message = str()
     total = 0
     for i in data_json:
         total += int(i['price'])
         message += f"👟{i['title']} x{i['quantity']} — ₽{i['price']}\n"
-    message += f"Итоговая сумма: ₽{total}\n Ссылка на оплату: https://google.com"
+    data = requests.get('https://pay.freekassa.ru/')
+    summ = '100'
+    order_id = '1111'
+    email = 'pashka191@yandex.ru'
+    description = ''
+    payment_link = client.generate_payment_link(order_id, summ, email, description)
+    message += f"Итоговая сумма: ₽{total}\n Ссылка на оплату: {payment_link}"
     await bot.send_message(webAppMes.chat.id, f"Ваш заказ:\n {message}")
+    print(payment_link)
     
