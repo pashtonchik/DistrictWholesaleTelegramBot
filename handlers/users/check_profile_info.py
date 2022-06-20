@@ -1,9 +1,10 @@
 from aiogram import types
 from aiogram.dispatcher import FSMContext
-from aiogram.types import WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton, ContentType
 
 from bd_custumers import take_customer, edit_customer, input_all
 import data
+from freekassa import create_link
 from keyboards.inline.yesno import yesorno
 from keyboards.inline.edit_profile import edit
 from keyboards.inline.yesno import yesorno
@@ -11,14 +12,7 @@ import json
 from loader import dp, bot
 from states.state import setting
 
-from freekassa import FreeKassaApi
-import requests
-
-client = FreeKassaApi(
-    first_secret='z$LLtY$7C<oiOpF',
-    second_secret='!UZi(zYI3E63/&[',
-    merchant_id='13d0bfab8dd487182cf417977fe8470c',
-    wallet_id='18316')
+PAYMENTS_PROVIDER_TOKEN = '381764678:TEST:38820'
 
 
 @dp.message_handler(text='Меню')
@@ -95,21 +89,42 @@ async def check_fio(message: types.Message):
 @dp.message_handler(content_types="web_app_data")
 async def answer(webAppMes: types.WebAppData):
     data_json = json.loads(webAppMes.web_app_data.data)
-    balance = client.get_balance()
-    print(balance.text)
     print(data_json)
     message = str()
     total = 0
     for i in data_json:
         total += int(i['price'])
         message += f"👟{i['title']} x{i['quantity']} — ₽{i['price']}\n"
-    data = requests.get('https://pay.freekassa.ru/')
-    summ = '100'
-    order_id = '1111'
-    email = 'pashka191@yandex.ru'
-    description = ''
-    payment_link = client.generate_payment_link(order_id, summ, email, description)
-    message += f"Итоговая сумма: ₽{total}\n Ссылка на оплату: {payment_link}"
+    create_link()
+    message += f"Итоговая сумма: ₽{total}\n Ссылка на оплату: ggggg"
     await bot.send_message(webAppMes.chat.id, f"Ваш заказ:\n {message}")
-    print(payment_link)
-    
+    PRICE = types.LabeledPrice(label='Ваш заказ', amount=total * 100)
+    await bot.send_invoice(
+        webAppMes.chat.id,
+        title='бебра',
+        description='вкусная',
+        provider_token=PAYMENTS_PROVIDER_TOKEN,
+        currency='rub',
+        is_flexible=False,  # True если конечная цена зависит от способа доставки
+        prices=[PRICE],
+        start_parameter='time-machine-example',
+        payload='some-invoice-payload-for-our-internal-use'
+    )
+
+
+@dp.pre_checkout_query_handler(func=lambda query: True)
+async def process_pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery):
+    await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
+
+
+@dp.message_handler(content_types=ContentType.SUCCESSFUL_PAYMENT)
+async def process_successful_payment(message: types.Message):
+    print('successful_payment:')
+    pmnt = message.successful_payment.to_python()
+    for key, val in pmnt.items():
+        print(f'{key} = {val}')
+
+    await bot.send_message(
+        message.chat.id,
+        'все ок'
+    )
