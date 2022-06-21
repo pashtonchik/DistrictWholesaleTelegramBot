@@ -12,7 +12,7 @@ import json
 from loader import dp, bot
 from states.state import setting
 
-PAYMENTS_PROVIDER_TOKEN = '381764678:TEST:38820'
+PAYMENTS_PROVIDER_TOKEN = '381764678:TEST:38824'
 
 
 @dp.message_handler(text='Меню')
@@ -93,8 +93,9 @@ async def answer(webAppMes: types.WebAppData):
     message = str()
     total = 0
     for i in data_json:
-        total += int(i['price'])
-        message += f"👟{i['title']} x{i['quantity']} — ₽{i['price']}\n"
+        summ = int(i['price']) * int(i['quantity'])
+        total += summ
+        message += f"👟{i['title']} x{i['quantity']} — ₽{summ}\n"
     create_link()
     message += f"Итоговая сумма: ₽{total}\n Ссылка на оплату: ggggg"
     await bot.send_message(webAppMes.chat.id, f"Ваш заказ:\n {message}")
@@ -112,8 +113,9 @@ async def answer(webAppMes: types.WebAppData):
     )
 
 
-@dp.pre_checkout_query_handler(func=lambda query: True)
+@dp.pre_checkout_query_handler(lambda query: True)
 async def process_pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery):
+    print(pre_checkout_query)
     await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
 
 
