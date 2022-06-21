@@ -92,24 +92,32 @@ async def answer(webAppMes: types.WebAppData):
     print(data_json)
     message = str()
     total = 0
+    PRICE = []
     for i in data_json:
         summ = int(i['price']) * int(i['quantity'])
         total += summ
         message += f"👟{i['title']} x{i['quantity']} — ₽{summ}\n"
+        summ = 100
+        PRICE.append(types.LabeledPrice(label=f"{i['title']}\n Размер: {i['size']} ", amount=summ * 100))
     create_link()
-    message += f"Итоговая сумма: ₽{total}\n Ссылка на оплату: ggggg"
-    await bot.send_message(webAppMes.chat.id, f"Ваш заказ:\n {message}")
-    PRICE = types.LabeledPrice(label='Ваш заказ', amount=total * 100)
+    message += f"Итоговая сумма: ₽{total}\n"
+    # await bot.send_message(webAppMes.chat.id, f"Ваш заказ:\n {message}")
+    types.LabeledPrice(label='Ваш заказ', amount=total * 100)
+    total = 1000
+
     await bot.send_invoice(
         webAppMes.chat.id,
-        title='бебра',
-        description='вкусная',
+        title='Оплата заказа',
+        description=message,
         provider_token=PAYMENTS_PROVIDER_TOKEN,
         currency='rub',
         is_flexible=False,  # True если конечная цена зависит от способа доставки
-        prices=[PRICE],
+        prices=PRICE,
+        need_name=True,
+        need_phone_number= True,
+        need_shipping_address=True,
         start_parameter='time-machine-example',
-        payload='some-invoice-payload-for-our-internal-use'
+        payload='some-invoice-payload-for-our-internal-use',
     )
 
 
@@ -121,6 +129,7 @@ async def process_pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery)
 
 @dp.message_handler(content_types=ContentType.SUCCESSFUL_PAYMENT)
 async def process_successful_payment(message: types.Message):
+    print(message)
     print('successful_payment:')
     pmnt = message.successful_payment.to_python()
     for key, val in pmnt.items():
