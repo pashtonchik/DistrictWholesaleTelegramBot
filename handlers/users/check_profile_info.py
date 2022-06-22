@@ -1,7 +1,8 @@
+from itertools import product
 from aiogram import types
 from aiogram.dispatcher import FSMContext
 from aiogram.types import WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton, ContentType
-
+from aiogram.dispatcher.filters.state import State, StatesGroup
 from bd_custumers import take_customer, edit_customer, input_all
 import data
 from freekassa import create_link
@@ -11,100 +12,30 @@ from keyboards.inline.yesno import yesorno
 import json
 from loader import dp, bot
 from states.state import setting
-
+from aiogram.dispatcher import FSMContext
+import requests
+import datetime
 PAYMENTS_PROVIDER_TOKEN = '381764678:TEST:38824'
 
 
-@dp.message_handler(text='Меню')
-async def check_fio(message: types.Message, state=FSMContext):
-    data = take_customer(message.from_user.id)
-    msg = f'''
-ФИО: {data[0][1]}
-Телефон: {data[0][2]}
-Адрес доставки: {data[0][4]} 
-'''
-    await message.answer(text=msg, reply_markup=edit)
-    await setting.check_profile.set()
-
-
-@dp.callback_query_handler(state=setting.check_profile)
-async def edit_profile(call: types.CallbackQuery, state=FSMContext):
-    if call.data == 'edit_fio':
-        await call.message.edit_text(text='Введите новое ФИО:', reply_markup='')
-        await setting.edit_fio.set()
-    elif call.data == 'edit_telephone':
-        await call.message.edit_text(text='Введите новый номер телефона:', reply_markup='')
-        await setting.edit_telephone.set()
-    elif call.data == 'edit_adress':
-        await call.message.edit_text(text='Введите новый адрес доставки:', reply_markup='')
-        await setting.edit_adress.set()
-    elif call.data == 'back':
-        await call.message.edit_text('Чтобы заказать кроссовки перейдите по ссылке',
-                                reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton(text='Заказать кроссовки',
-                                web_app=WebAppInfo(url='https://zingy-flan-23354b.netlify.app/'))).add(InlineKeyboardButton(
-                                    text='Посмотреть свой профиль', callback_data='check_profile'
-                                )))
-        await state.finish()
-
-
-@dp.message_handler(state=setting.edit_fio)
-async def check_fio(message: types.Message):
-    edit_customer('fio', message.from_user.id, message.text)
-    data = take_customer(message.from_user.id)
-    msg = f'''
-ФИО: {data[0][1]}
-Телефон: {data[0][2]}
-Адрес доставки: {data[0][4]} 
-    '''
-    await message.answer(text=msg, reply_markup=edit)
-    await setting.check_profile.set()
-
-
-@dp.message_handler(state=setting.edit_telephone)
-async def check_fio(message: types.Message):
-    edit_customer('tel', message.from_user.id, message.text)
-    data = take_customer(message.from_user.id)
-    msg = f'''
-ФИО: {data[0][1]}
-Телефон: {data[0][2]}
-Адрес доставки: {data[0][4]} 
-    '''
-    await message.answer(text=msg, reply_markup=edit)
-    await setting.check_profile.set()
-
-
-@dp.message_handler(state=setting.edit_adress)
-async def check_fio(message: types.Message):
-    edit_customer('adress', message.from_user.id, message.text)
-    data = take_customer(message.from_user.id)
-    msg = f'''
-ФИО: {data[0][1]}
-Телефон: {data[0][2]}
-Адрес доставки: {data[0][4]} 
-    '''
-    await message.answer(text=msg, reply_markup=edit)
-    await setting.check_profile.set()
-
-
-@dp.message_handler(content_types="web_app_data")
-async def answer(webAppMes: types.WebAppData):
+@dp.message_handler(content_types="web_app_data", state='*')
+async def answer(webAppMes: types.WebAppData, state: FSMContext):
     data_json = json.loads(webAppMes.web_app_data.data)
     print(data_json)
-    message = str()
+    message = 'Кроссовки: '
     total = 0
     PRICE = []
     for i in data_json:
         summ = int(i['price']) * int(i['quantity'])
         total += summ
-        message += f"👟{i['title']} x{i['quantity']} — ₽{summ}\n"
+        message += f"{i['title']} x{i['quantity']} Размер: {i['size']} — ₽{summ}, "
         summ = 100
         PRICE.append(types.LabeledPrice(label=f"{i['title']}\n Размер: {i['size']} ", amount=summ * 100))
-    create_link()
     message += f"Итоговая сумма: ₽{total}\n"
-    # await bot.send_message(webAppMes.chat.id, f"Ваш заказ:\n {message}")
     types.LabeledPrice(label='Ваш заказ', amount=total * 100)
     total = 1000
-
+    await state.finish()
+    await state.update_data(product=data_json)
     await bot.send_invoice(
         webAppMes.chat.id,
         title='Оплата заказа',
@@ -128,14 +59,40 @@ async def process_pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery)
 
 
 @dp.message_handler(content_types=ContentType.SUCCESSFUL_PAYMENT)
-async def process_successful_payment(message: types.Message):
-    print(message)
-    print('successful_payment:')
+async def process_successful_payment(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    await state.finish()
+    sneaker = list()
+    
+    for i in data['product']:
+        sneaker.append({'product_name' : i['title'], 'size' : i['size'], 'quantity': i['quantity'], 'price': i['price']})
     pmnt = message.successful_payment.to_python()
-    for key, val in pmnt.items():
-        print(f'{key} = {val}')
-
-    await bot.send_message(
-        message.chat.id,
-        'все ок'
-    )
+    print(pmnt['order_info'])
+    date = str(datetime.datetime.now().date())
+    url = 'http://194.58.107.7:8000'
+    req = f"""{url}/api/resource/Selling%20Order%20OneTwoSneaker"""
+    jn = {"customer_name": pmnt['order_info']["name"],
+        "date": date,
+        "phone_number": pmnt['order_info']["phone_number"],
+        "address1": pmnt['order_info']["shipping_address"]["street_line1"],
+        "address2": pmnt['order_info']["shipping_address"]["street_line2"],
+        "city": pmnt['order_info']["shipping_address"]["city"],
+        "state": pmnt['order_info']["shipping_address"]["state"],
+        "postcode": pmnt['order_info']["shipping_address"]["post_code"],
+        "product" : sneaker
+    }
+    headers = {
+    'Authorization': "token ed87374be6f1468:769aa1df0bae7f5",
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+    }
+    data = json.dumps(jn)
+    response = requests.post(url = req, data = data, headers=headers)
+    if (response.status_code == 200):
+        await bot.send_message(
+            message.chat.id,
+            'Оплата прошла успешно! С вами скоро свяжется наш менеджер!'
+        )
+    else:
+        await bot.send_message(message.chat.id, 'Произошла ошибка, <b>свяжитесь</b> с тех. поддержкой! Наш ТГ: t.me/a5caff8b53cbd89e51822f1c3e0e66d2',
+         parse_mode='HTML')
