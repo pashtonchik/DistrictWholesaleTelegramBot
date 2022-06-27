@@ -15,7 +15,7 @@ from states.state import setting
 from aiogram.dispatcher import FSMContext
 import requests
 import datetime
-PAYMENTS_PROVIDER_TOKEN = '381764678:TEST:38824'
+PAYMENTS_PROVIDER_TOKEN = '390540012:LIVE:24861'
 
 
 @dp.message_handler(content_types="web_app_data", state='*')
@@ -46,6 +46,7 @@ async def answer(webAppMes: types.WebAppData, state: FSMContext):
         prices=PRICE,
         need_name=True,
         need_phone_number= True,
+        send_phone_number_to_provider=True,
         need_shipping_address=True,
         start_parameter='time-machine-example',
         payload='some-invoice-payload-for-our-internal-use',
@@ -87,12 +88,18 @@ async def process_successful_payment(message: types.Message, state: FSMContext):
     'Accept': 'application/json'
     }
     data = json.dumps(jn)
-    response = requests.post(url = req, data = data, headers=headers)
-    if (response.status_code == 200):
-        await bot.send_message(
-            message.chat.id,
-            'Оплата прошла успешно! С вами скоро свяжется наш менеджер!'
-        )
-    else:
+    try:
+        response = requests.post(url = req, data = data, headers=headers)
+        if (response.status_code == 200):
+            await bot.send_message(
+                message.chat.id,
+                'Оплата прошла успешно! С вами скоро свяжется наш менеджер!'
+            )
+        else:
+            await bot.send_message(
+                message.chat.id, 
+                'Произошла ошибка, <b>свяжитесь</b> с тех. поддержкой! Наш ТГ: t.me/a5caff8b53cbd89e51822f1c3e0e66d2',
+                parse_mode='HTML') 
+    except Exception as e:
         await bot.send_message(message.chat.id, 'Произошла ошибка, <b>свяжитесь</b> с тех. поддержкой! Наш ТГ: t.me/a5caff8b53cbd89e51822f1c3e0e66d2',
-         parse_mode='HTML')
+             parse_mode='HTML') 
