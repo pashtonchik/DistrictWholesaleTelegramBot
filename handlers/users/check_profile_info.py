@@ -32,7 +32,7 @@ async def answer(webAppMes: types.WebAppData, state: FSMContext):
             description=message,
             provider_token=PAYMENTS_PROVIDER_TOKEN,
             currency='rub',
-            is_flexible=False,  # True если конечная цена зависит от способа доставки
+            is_flexible=False,
             prices=PRICE,
             need_name=True,
             need_phone_number=True,
@@ -55,12 +55,12 @@ async def process_pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery)
 async def process_successful_payment(message: types.Message, state: FSMContext):
     sneakers_data = await state.get_data()
     await state.finish()
-    pmnt = message.successful_payment.to_python()['order_info']
+    payment_info = message.successful_payment.to_python()['order_info']
     body = {
         'order_list': {
-            "customer": pmnt['name'],
-            "shipping_address": f'''{pmnt['shipping_address']['city']}, {pmnt['shipping_address']['street_line1']}, {pmnt['shipping_address']['street_line2']} ''',
-            "phone_number": pmnt['phone_number'],
+            "customer": payment_info['name'],
+            "shipping_address": f'''{payment_info['shipping_address']['city']}, {payment_info['shipping_address']['street_line1']}, {payment_info['shipping_address']['street_line2']} ''',
+            "phone_number": payment_info['phone_number'],
         },
         'order_items': [
             {
@@ -75,7 +75,8 @@ async def process_successful_payment(message: types.Message, state: FSMContext):
     b = requests.post("https://onetwosneaker.ru/api/addorder", data=json.dumps(body))
     if b.status_code == 200:
         order_id = b.json()['order_id']
-        await bot.send_message(message.chat.id, f'Оплата произошла успешно, номер вашего заказа {order_id}', parse_mode='HTML')
+        await bot.send_message(message.chat.id, f'Оплата произошла успешно, номер вашего заказа {order_id}, с вами скоро свяжется менеджер',
+                               parse_mode='HTML')
     else:
         await bot.send_message(message.chat.id,
                                'Произошла ошибка, <b>свяжитесь</b> с тех. поддержкой! Наш ТГ: t.me/a5caff8b53cbd89e51822f1c3e0e66d2',
