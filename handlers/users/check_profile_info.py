@@ -1,83 +1,57 @@
 from aiogram import types
-from aiogram.types import ContentType
+from aiogram.types import ContentType, InlineKeyboardButton, InlineKeyboardMarkup
 import json
+
+from keyboards.inline.delivery import delivery
+from keyboards.inline.is_pay import is_pay
+from keyboards.inline.no_comments import no_comments
+from keyboards.inline.yesno import yesorno
 from loader import dp, bot
 from aiogram.dispatcher import FSMContext
 import requests
 
+from states.state import Setting
+
 PAYMENTS_PROVIDER_TOKEN = '381764678:TEST:38490'
 
 
+def get_order_message(total_cost):
+    return \
+        f"""\n
+Итоговая сумма: ₽{total_cost}\n
+<u>Для оплаты заказа переведите <b>{total_cost}</b>₽ по этому номеру карты </u> \n
+<code> 4242424242424242 </code>
+\n
+После отправки средств, нажмите кнопку "Оплатил"
+"""
+
+
 @dp.message_handler(content_types="web_app_data", state='*')
-async def answer(webAppMes: types.WebAppData, state: FSMContext):
+async def answer(webappmes: types.WebAppData, state: FSMContext):
+    user_data = await state.get_data()
     check_request = requests.get('https://onetwosneaker.ru/api/check')
     if check_request.status_code == 200:
-        data_json = json.loads(webAppMes.web_app_data.data)
-        message = 'Кроссовки: '
+        data_json = json.loads(webappmes.web_app_data.data)
+        message = 'Продукты: \n'
         total = 0
-        PRICE = []
         for i in data_json:
             summ = int(i['price']) * int(i['quantity'])
             total += summ
-            message += f"{i['title']} x{i['quantity']} Размер: {i['size']} — ₽{summ}, "
-            summ = 100
-            PRICE.append(types.LabeledPrice(label=f"{i['title']}\n Размер: {i['size']} ", amount=summ * 100))
-        message += f"Итоговая сумма: ₽{total}\n"
-        types.LabeledPrice(label='Ваш заказ', amount=total * 100)
-        await state.finish()
-        await state.update_data(product=data_json)
-        await bot.send_invoice(
-            webAppMes.chat.id,
-            title='Оплата заказа',
-            description=message,
-            provider_token=PAYMENTS_PROVIDER_TOKEN,
-            currency='rub',
-            is_flexible=False,
-            prices=PRICE,
-            need_name=True,
-            need_phone_number=True,
-            send_phone_number_to_provider=True,
-            need_shipping_address=True,
-            start_parameter='time-machine-example',
-            payload='some-invoice-payload-for-our-internal-use',
-        )
+            message += f"{i['title']} x{i['quantity']} {i['weight']} — ₽{summ} \n"
+
+        await bot.send_message(webappmes.chat.id, message, reply_markup=delivery)
+        await Setting.choice_method.set()
+        await state.update_data(cart=data_json)
     else:
-        await webAppMes.answer(text='Сервер в данный момент недоступен, повторите попытку позже')
+        await webappmes.answer(text='Сервер в данный момент недоступен, повторите попытку позже')
         await state.finish()
 
 
-@dp.pre_checkout_query_handler(lambda query: True)
-async def process_pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery):
-    await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
-
-
-@dp.message_handler(content_types=ContentType.SUCCESSFUL_PAYMENT)
-async def process_successful_payment(message: types.Message, state: FSMContext):
-    sneakers_data = await state.get_data()
-    await state.finish()
-    payment_info = message.successful_payment.to_python()['order_info']
-    body = {
-        'order_list': {
-            "customer": payment_info['name'],
-            "shipping_address": f'''{payment_info['shipping_address']['city']}, {payment_info['shipping_address']['street_line1']}, {payment_info['shipping_address']['street_line2']} ''',
-            "phone_number": payment_info['phone_number'],
-        },
-        'order_items': [
-            {
-                'sneaker_id': item['id'],
-                'sneaker_size': item['size'],
-                'quantity': item['quantity'],
-            }
-            for item in sneakers_data['product']
-        ]
-    }
-    print(body)
-    b = requests.post("https://onetwosneaker.ru/api/addorder", data=json.dumps(body))
-    if b.status_code == 200:
-        order_id = b.json()['order_id']
-        await bot.send_message(message.chat.id, f'Оплата произошла успешно, номер вашего заказа {order_id}, с вами скоро свяжется менеджер',
-                               parse_mode='HTML')
-    else:
-        await bot.send_message(message.chat.id,
-                               'Произошла ошибка, <b>свяжитесь</b> с тех. поддержкой! Наш ТГ: t.me/a5caff8b53cbd89e51822f1c3e0e66d2',
-                               parse_mode='HTML')
+@dp.callback_query_handler(state=Setting.payment)
+async def process_successful_payment(call: types.CallbackQuery, state: FSMContext):
+    if call.data == 'is_paid':
+        await call.message.answer('Спасибо! Отправьте чек об оплате менеджеру - @LarS2S')
+        await state.finish()
+    elif call.data == 'cancel':
+        await call.message.edit_text('Можете продолжить покупки, нажав на кнопку "Заказать продукты"', reply_markup='')
+        await state.finish()
