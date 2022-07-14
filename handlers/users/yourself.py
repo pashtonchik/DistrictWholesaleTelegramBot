@@ -11,7 +11,6 @@ from states.state import Setting
 
 @dp.callback_query_handler(text='yourself', state=Setting.choice_method)
 async def set_address(call: types.CallbackQuery, state=FSMContext):
-    print(call.data)
     cart_data = await state.get_data()
     await bot.edit_message_text(chat_id=call.message.chat.id,
                                 message_id=call.message.message_id,

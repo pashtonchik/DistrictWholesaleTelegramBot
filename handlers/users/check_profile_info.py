@@ -12,8 +12,6 @@ import requests
 
 from states.state import Setting
 
-PAYMENTS_PROVIDER_TOKEN = '381764678:TEST:38490'
-
 
 def get_order_message(total_cost):
     return \
