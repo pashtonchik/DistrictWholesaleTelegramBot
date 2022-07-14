@@ -1,11 +1,8 @@
 from aiogram import types
-from aiogram.types import ContentType, InlineKeyboardButton, InlineKeyboardMarkup
 import json
 
+from data import config
 from keyboards.inline.delivery import delivery
-from keyboards.inline.is_pay import is_pay
-from keyboards.inline.no_comments import no_comments
-from keyboards.inline.yesno import yesorno
 from loader import dp, bot
 from aiogram.dispatcher import FSMContext
 import requests
@@ -18,7 +15,7 @@ def get_order_message(total_cost):
         f"""\n
 Итоговая сумма: ₽{total_cost}\n
 <u>Для оплаты заказа переведите <b>{total_cost}</b>₽ по этому номеру карты </u> \n
-<code> 4242424242424242 </code>
+<code> {config.CART_NUMBER} </code>
 \n
 После отправки средств, нажмите кнопку "Оплатил"
 """
