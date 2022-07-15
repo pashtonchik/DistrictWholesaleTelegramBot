@@ -158,7 +158,7 @@ async def set_address(message: types.Message, state=FSMContext):
     message_text += f'Адрес доставки: {product_data["shipping_address"]}\n'
     message_text += f'Комментарий: {comment}'
     message_text += get_order_message(total)
-    await message.answer(text=message_text)
+    await message.answer(text=message_text, reply_markup=is_pay)
     await state.update_data(comment=comment)
     await Setting.payment.set()
 
