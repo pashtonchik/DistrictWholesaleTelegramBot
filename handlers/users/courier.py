@@ -156,9 +156,10 @@ async def set_address(message: types.Message, state=FSMContext):
         total += summ
         message_text += f"{i['title']} {int(i['quantity']) * int(total_weight[0])} {total_weight[1]} — ₽{summ} \n"
     message_text += f'Адрес доставки: {product_data["shipping_address"]}\n'
-    message_text += f'Комментарий курьеру: {comment}'
+    message_text += f'Комментарий: {comment}'
     message_text += get_order_message(total)
-    await message.answer(text=message_text, reply_markup=is_pay)
+    await message.answer(text=message_text)
+    await state.update_data(comment=comment)
     await Setting.payment.set()
 
     body_add_order = {

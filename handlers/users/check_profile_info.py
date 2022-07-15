@@ -47,6 +47,18 @@ async def answer(webappmes: types.WebAppData, state: FSMContext):
 @dp.callback_query_handler(state=Setting.payment)
 async def process_successful_payment(call: types.CallbackQuery, state: FSMContext):
     if call.data == 'is_paid':
+        product_data = await state.get_data()
+        message_text = 'Продукты: \n'
+        total = 0
+        for i in product_data['cart']:
+            total_weight = i['weight'].split()
+            summ = int(i['price']) * int(i['quantity'])
+            total += summ
+            message_text += f"{i['title']} {int(i['quantity']) * int(total_weight[0])} {total_weight[1]} — ₽{summ} \n"
+        message_text += f'Адрес доставки: {product_data["shipping_address"]}\n'
+        message_text += f'Комментарий курьеру: {product_data['comment']}'
+        message_text += get_order_message(total)
+        await call.message.edit_text()
         await call.message.answer('Спасибо! Отправьте чек об оплате менеджеру - @LarS2S')
         await state.finish()
     elif call.data == 'cancel':
