@@ -1,17 +1,12 @@
 from aiogram import types
-from aiogram.types import ContentType, InlineKeyboardButton, InlineKeyboardMarkup
 import json
 from handlers.users.check_profile_info import get_order_message
-from keyboards.inline import delivery
 from keyboards.inline.edit_adress import edit_address
 from keyboards.inline.is_pay import is_pay
-from keyboards.inline.no_comments import no_comments
-from keyboards.inline.yesno import yesorno
 from loader import dp, bot
 from aiogram.dispatcher import FSMContext
 import requests
 
-# from states.state import Setting
 from states.state import Setting
 
 
@@ -168,6 +163,7 @@ async def set_address(message: types.Message, state=FSMContext):
         "customer_tg_id": message.from_user.id,
         "shipping_address": product_data['shipping_address'],
         "comment": comment,
+        "delivery_required": True,
         "order_items": [
             {
                 "vegetable_id": item['id'],

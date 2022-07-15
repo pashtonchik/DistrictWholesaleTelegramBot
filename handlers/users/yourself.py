@@ -24,6 +24,7 @@ async def set_address(call: types.CallbackQuery, state=FSMContext):
 async def set_address(message: types.Message, state=FSMContext):
     comment = message.text
     product_data = await state.get_data()
+    print(product_data['cart'])
     message_text = 'Продукты: \n'
     total = 0
     for i in product_data['cart']:
@@ -39,6 +40,7 @@ async def set_address(message: types.Message, state=FSMContext):
         "customer_tg_id": message.from_user.id,
         "shipping_address": 'Самовывоз',
         "comment": comment,
+        "delivery_required": 0,
         "order_items": [
             {
                 "vegetable_id": item['id'],
@@ -47,6 +49,6 @@ async def set_address(message: types.Message, state=FSMContext):
             for item in product_data['cart']
         ]
     }
-
+    print(body_add_order)
     body_add_order = json.dumps(body_add_order)
     r = requests.post("https://onetwosneaker.ru/api2/addorder", data=body_add_order)

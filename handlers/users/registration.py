@@ -3,7 +3,7 @@ import json
 import requests
 from aiogram import types
 from aiogram.dispatcher import FSMContext
-from aiogram.types import WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import WebAppInfo, ReplyKeyboardMarkup, KeyboardButton
 
 from data import config
 from keyboards.inline.yesno import yesorno
