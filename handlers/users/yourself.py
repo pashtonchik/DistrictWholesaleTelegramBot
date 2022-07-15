@@ -34,9 +34,10 @@ async def set_address(message: types.Message, state=FSMContext):
     message_text = 'Продукты: \n'
     total = 0
     for i in product_data['cart']:
+        total_weight = i['weight'].split()
         summ = int(i['price']) * int(i['quantity'])
         total += summ
-        message_text += f"{i['title']} x{i['quantity']} {i['weight']} — ₽{summ} \n"
+        message_text += f"{i['title']} {int(i['quantity']) * int(total_weight[0])} {total_weight[1]} — ₽{summ} \n"
     message_text += f'Комментарий курьеру: {comment}'
     message_text += get_order_message(total)
     await message.answer(text=message_text, reply_markup=is_pay)
