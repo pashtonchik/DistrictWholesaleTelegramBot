@@ -55,11 +55,11 @@ async def process_successful_payment(call: types.CallbackQuery, state: FSMContex
             summ = int(i['price']) * int(i['quantity'])
             total += summ
             message_text += f"{i['title']} {int(i['quantity']) * int(total_weight[0])} {total_weight[1]} — ₽{summ} \n"
-        if product_data["shipping_address"]:
+        if "shipping_address" in product_data.keys():
             message_text += f'Адрес доставки: {product_data["shipping_address"]}\n'
-        message_text += f'Комментарий курьеру: {product_data["comment"]}'
+        message_text += f'Комментарий: {product_data["comment"]}'
         message_text += get_order_message(total)
-        await call.message.edit_text()
+        await call.message.edit_text(message_text)
         await call.message.answer('Спасибо! Отправьте чек об оплате менеджеру - @LarS2S')
         await state.finish()
     elif call.data == 'cancel':
