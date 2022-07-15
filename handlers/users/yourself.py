@@ -9,6 +9,13 @@ from aiogram.dispatcher import FSMContext
 from states.state import Setting
 
 
+def get_quantity(item):
+    weight = item['weight']
+    quantity = item['quantity']
+    quantity = quantity * 100 if weight[len(weight) - 2:] == 'ГР' else quantity
+    return quantity
+
+
 @dp.callback_query_handler(text='yourself', state=Setting.choice_method)
 async def set_address(call: types.CallbackQuery, state=FSMContext):
     cart_data = await state.get_data()
@@ -24,7 +31,6 @@ async def set_address(call: types.CallbackQuery, state=FSMContext):
 async def set_address(message: types.Message, state=FSMContext):
     comment = message.text
     product_data = await state.get_data()
-    print(product_data['cart'])
     message_text = 'Продукты: \n'
     total = 0
     for i in product_data['cart']:
@@ -40,15 +46,14 @@ async def set_address(message: types.Message, state=FSMContext):
         "customer_tg_id": message.from_user.id,
         "shipping_address": 'Самовывоз',
         "comment": comment,
-        "delivery_required": 0,
+        "delivery_required": False,
         "order_items": [
             {
                 "vegetable_id": item['id'],
-                "quantity": item['quantity'],
+                "quantity": get_quantity(item),
             }
             for item in product_data['cart']
         ]
     }
-    print(body_add_order)
     body_add_order = json.dumps(body_add_order)
     r = requests.post("https://onetwosneaker.ru/api2/addorder", data=body_add_order)

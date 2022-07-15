@@ -1,6 +1,7 @@
 from aiogram import types
 import json
 from handlers.users.check_profile_info import get_order_message
+from handlers.users.yourself import get_quantity
 from keyboards.inline.edit_adress import edit_address
 from keyboards.inline.is_pay import is_pay
 from loader import dp, bot
@@ -167,7 +168,7 @@ async def set_address(message: types.Message, state=FSMContext):
         "order_items": [
             {
                 "vegetable_id": item['id'],
-                "quantity": item['quantity'],
+                "quantity": get_quantity(item),
             }
             for item in product_data['cart']
         ]
