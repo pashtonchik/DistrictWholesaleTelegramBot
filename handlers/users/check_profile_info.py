@@ -30,9 +30,11 @@ async def answer(webappmes: types.WebAppData, state: FSMContext):
         message = 'Продукты: \n'
         total = 0
         for i in data_json:
+            total_weight = i['weight'].split()
+            
             summ = int(i['price']) * int(i['quantity'])
             total += summ
-            message += f"{i['title']} x{i['quantity']} {i['weight']} — ₽{summ} \n"
+            message += f"{i['title']} {int(i['quantity']) * int(total_weight[0])} {total_weight[1]} — ₽{summ} \n"
 
         await bot.send_message(webappmes.chat.id, message, reply_markup=delivery)
         await Setting.choice_method.set()
