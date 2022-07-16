@@ -33,10 +33,12 @@ async def set_address(message: types.Message, state=FSMContext):
     product_data = await state.get_data()
     message_text = 'Продукты: \n'
     total = 0
+    client_info = requests.get(f'https://onetwosneaker.ru/api2/customers/?tg_id={message.from_user.id}')
+    client_discount = json.loads(client_info.text)[0]['discount']
     for i in product_data['cart']:
         total_weight = i['weight'].split()
         summ = int(i['price']) * int(i['quantity'])
-        total += summ
+        total += summ * ((100 - client_discount) / 100)
         message_text += f"{i['title']} {int(i['quantity']) * int(total_weight[0])} {total_weight[1]} — ₽{summ} \n"
     message_text += f'Комментарий: {comment}'
     message_text += get_order_message(total)
