@@ -13,8 +13,5 @@ body_add_order = {
             }
         ],
     }
-print(body_add_order)
 body_add_order = json.dumps(body_add_order)
 r = requests.post("http://localhost:8000/api2/addorder", data=body_add_order)
-
-print(r)

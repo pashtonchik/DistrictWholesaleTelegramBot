@@ -41,10 +41,11 @@ async def set_address(message: types.Message, state=FSMContext):
         total += summ * ((100 - client_discount) / 100)
         message_text += f"{i['title']} {int(i['quantity']) * int(total_weight[0])} {total_weight[1]} — ₽{summ} \n"
     message_text += f'Комментарий: {comment}'
-    message_text += get_order_message(total)
+    message_text += get_order_message(str(total), client_discount)
     await message.answer(text=message_text, reply_markup=is_pay)
-    await state.update_data(comment=comment)
     await Setting.payment.set()
+    await state.update_data(comment=comment, message_text=message_text)
+
     body_add_order = {
         "customer_tg_id": message.from_user.id,
         "shipping_address": 'Самовывоз',

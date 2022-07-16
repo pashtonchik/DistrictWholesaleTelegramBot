@@ -10,15 +10,24 @@ import requests
 from states.state import Setting
 
 
-def get_order_message(total_cost):
-    return \
-        f"""\n
-Итоговая сумма: ₽{total_cost}\n
+def get_order_message(total_cost, discount):
+    if discount:
+        return f"""\n
+Итоговая сумма с учетом скидки: ₽{total_cost}\n
 <u>Для оплаты заказа переведите <b>{total_cost}</b>₽ по этому номеру карты </u> \n
 <code> {config.CART_NUMBER} </code>
 \n
 После отправки средств, нажмите кнопку "Оплатил"
 """
+
+    else:
+        return f"""\n
+Итоговая сумма: ₽{total_cost}\n
+<u>Для оплаты заказа переведите <b>{total_cost}</b>₽ по этому номеру карты </u> \n
+<code> {config.CART_NUMBER} </code>
+\n
+После отправки средств, нажмите кнопку "Оплатил"
+    """
 
 
 @dp.message_handler(content_types="web_app_data", state='*')
@@ -31,7 +40,7 @@ async def answer(webappmes: types.WebAppData, state: FSMContext):
         total = 0
         for i in data_json:
             total_weight = i['weight'].split()
-            
+
             summ = int(i['price']) * int(i['quantity'])
             total += summ
             message += f"{i['title']} {int(i['quantity']) * int(total_weight[0])} {total_weight[1]} — ₽{summ} \n"
@@ -48,17 +57,7 @@ async def answer(webappmes: types.WebAppData, state: FSMContext):
 async def process_successful_payment(call: types.CallbackQuery, state: FSMContext):
     if call.data == 'is_paid':
         product_data = await state.get_data()
-        message_text = 'Продукты: \n'
-        total = 0
-        for i in product_data['cart']:
-            total_weight = i['weight'].split()
-            summ = int(i['price']) * int(i['quantity'])
-            total += summ
-            message_text += f"{i['title']} {int(i['quantity']) * int(total_weight[0])} {total_weight[1]} — ₽{summ} \n"
-        if "shipping_address" in product_data.keys():
-            message_text += f'Адрес доставки: {product_data["shipping_address"]}\n'
-        message_text += f'Комментарий: {product_data["comment"]}'
-        message_text += get_order_message(total)
+        message_text = product_data['message_text']
         await call.message.edit_text(message_text)
         await call.message.answer('Спасибо! Отправьте чек об оплате менеджеру - @LarS2S')
         await state.finish()
